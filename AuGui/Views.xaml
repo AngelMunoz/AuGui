@@ -1,0 +1,40 @@
+<Styles
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Style Selector="StackPanel.NameAndPathSection">
+    <Setter Property="DockPanel.Dock" Value="Top" />
+  </Style>
+  <Style Selector="StackPanel.TemplateSelectionSection">
+    <Setter Property="DockPanel.Dock" Value="Top" />
+  </Style>
+  <Style Selector="WrapPanel.CustomTemplateSection">
+    <Setter Property="DockPanel.Dock" Value="Top" />
+  </Style>
+  <Style Selector="StackPanel.FooterSection">
+    <Setter Property="DockPanel.Dock" Value="Bottom" />
+  </Style>
+  <Style Selector="ScrollViewer.LogScrollViewer">
+    <Setter Property="MinHeight" Value="162" />
+  </Style>
+  <Style Selector="TextBlock.LogTextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontFamily" Value="resm:AuGui.Assets.Fonts?assembly=AuGui#Fira Code" />
+  </Style>
+  <Style Selector="TextBlock.ErrorLogTextBlock">
+    <Setter Property="Foreground" Value="Yellow" />
+  </Style>
+  <Style Selector="StackPanel.VerticalRadios">
+    <Setter Property="Orientation" Value="Vertical" />
+  </Style>
+  <Style Selector="StackPanel.HorizontalRadios">
+    <Setter Property="Orientation" Value="Horizontal" />
+  </Style>
+  <Style Selector="DockPanel.NewProjectForm">
+    <Setter Property="Margin" Value="12" />
+    <Setter Property="LastChildFill" Value="True" />
+  </Style>
+  <Style Selector="StackPanel.DockTop">
+    <Setter Property="DockPanel.Dock" Value="Top" />
+  </Style>
+</Styles>

@@ -1,0 +1,35 @@
+<Styles
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Style Selector="StackPanel.FormSection">
+    <Setter Property="Margin" Value="8" />
+    <Setter Property="Spacing" Value="12" />
+  </Style>
+
+  <Style Selector="StackPanel.RadioGroup">
+    <Setter Property="Margin" Value="8" />
+    <Setter Property="Spacing" Value="4" />
+  </Style>
+
+  <Style Selector="StackPanel.WrappingRadioGroup">
+    <Setter Property="Margin" Value="8" />
+  </Style>
+
+  <Style Selector="TextBlock.RadioGroupLabel">
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="FontWeight" Value="600" />
+    <Setter Property="Margin" Value="0, 4" />
+  </Style>
+
+  <Style Selector="DockPanel.DockForm">
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+
+  <Style Selector="TextBlock.ViewHeader">
+    <Setter Property="FontSize" Value="22" />
+    <Setter Property="FontWeight" Value="700" />
+  </Style>
+  
+</Styles>
