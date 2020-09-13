@@ -53,7 +53,8 @@ module CliInterop =
                     (auCommand: AureliaCli.AuCliCommand)
                     : Command =
 
-    let command = AuCliCommand.GenerateCommand auCommand
+    let command =
+      AuCliCommand.GeneratePreCommand auCommand
 
     Cli.Wrap(command.Command).WithArguments(command.Args)
        .WithWorkingDirectory(targetPath)

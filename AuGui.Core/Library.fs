@@ -333,7 +333,7 @@ module AureliaCli =
         Args = [| "new"; command.Name; "-s"; args |]
       }
 
-    let GenerateCommand (command: AuCliCommand): PreCommand =
+    let GeneratePreCommand (command: AuCliCommand): PreCommand =
       match command with
       | AuCliCommand.New newArgs -> generateNewCommand newArgs
       | AuCliCommand.Build flags ->
@@ -360,7 +360,7 @@ module AureliaCli =
 
           {
             Command = baseCommand
-            Args = [| "build"; flags |]
+            Args = [| "run"; flags |]
           }
       | AuCliCommand.Generate (generator, name) ->
           let dir =
@@ -374,6 +374,7 @@ module AureliaCli =
               [|
                 "generate"
                 generator.ToArgString()
+                name
                 dir
               |]
           }
