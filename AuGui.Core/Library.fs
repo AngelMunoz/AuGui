@@ -6,10 +6,36 @@ open System.Text.Json.Serialization
 open System.Runtime.InteropServices
 
 
+[<RequireQualifiedAccess>]
+type Platform =
+  | Windows
+  | Linux
+  | OSX
+  | Other
+
+  static member DetectPlatform() =
+    if RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+    then Windows
+    else if RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+    then Linux
+    else if RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+    then OSX
+    else Other
+
+
 module Node =
   open System.IO
   open System.Threading.Tasks
   open FSharp.Control.Tasks
+
+  [<RequireQualifiedAccess>]
+  type PackageManager =
+    | Npm
+    | Pnpm
+    member this.ToArgString() =
+      match this with
+      | Npm -> "npm"
+      | Pnpm -> "pnpm"
 
   [<JsonFSharpConverter>]
   type PackageJson =
@@ -39,118 +65,330 @@ module Node =
           with ex -> return Error ex.Message
       }
 
-[<RequireQualifiedAccess>]
-type ProjectType =
-  | Babel
-  | Typescript
-  | Custom
 
-[<RequireQualifiedAccess>]
-type Bundler =
-  | Dumber
-  | Webpack
+module AureliaCli =
+  let private getExt (): string =
+    match Platform.DetectPlatform() with
+    | Platform.Windows -> ".cmd"
+    | Platform.Linux
+    | Platform.OSX
+    | Platform.Other -> ""
 
-[<RequireQualifiedAccess>]
-type Transpiler =
-  | Babel
-  | Typescript
+  let baseCommand = sprintf "aurelia%s" (getExt ())
 
-[<RequireQualifiedAccess>]
-type CssMode =
-  | CssModule
-  | ShadowDom
+  module New =
 
-[<RequireQualifiedAccess>]
-type CssPreprocessor =
-  | Css
-  | Sass
-  | Less
+    [<RequireQualifiedAccess>]
+    type ProjectKind =
+      | Babel
+      | Typescript
+      | Custom
 
-[<RequireQualifiedAccess>]
-type E2ETestingFx = | Cypress
+    [<RequireQualifiedAccess>]
+    type ProjectType =
+      | App of ProjectKind
+      | Plugin of ProjectKind
 
-[<RequireQualifiedAccess>]
-type UnitTestingFx =
-  | Jest
-  | Jasmine
-  | Mocha
-  | Tape
+      member this.ToArgString() =
+        match this with
+        | App _ -> ""
+        | Plugin _ -> "--plugin"
 
-[<RequireQualifiedAccess>]
-type SampleCode =
-  | AppMin
-  | AppWithRouter
+    [<RequireQualifiedAccess>]
+    type CliBundlerType =
+      | RequireJs
+      | Alameda
 
-type Template =
-  {
-    Bundler: Bundler
-    Transpiler: Transpiler
-    CssPreprocessor: CssPreprocessor
-    UnitTestingFx: UnitTestingFx
-    E2ETesingFx: Option<E2ETestingFx>
-    SampleCode: SampleCode
-  }
+      member this.ToArgString() =
+        match this with
+        | RequireJs -> ""
+        | Alameda -> ",alameda"
 
-  static member GetCmdArgs(template: Template): array<string> =
-    let bundler =
-      match template.Bundler with
-      | Bundler.Webpack -> "webpack"
-      | Bundler.Dumber -> "dumber"
+    [<RequireQualifiedAccess>]
+    type Bundler =
+      | Webpack
+      | CliBundler of CliBundlerType
+      member this.ToArgString() =
+        match this with
+        | Webpack -> ""
+        | CliBundler bundler -> sprintf "cli-bundler%s" (bundler.ToArgString())
 
-    let transpiler =
-      match template.Transpiler with
-      | Transpiler.Typescript -> "typescript"
-      | Transpiler.Babel -> "babel"
+    [<RequireQualifiedAccess>]
+    type TargetPlatform =
+      | Web
+      | DotnetCore
+      member this.ToArgString() =
+        match this with
+        | Web -> ""
+        | DotnetCore -> "dotnet-core"
 
-    let cssPreprocessor =
-      match template.CssPreprocessor with
-      | CssPreprocessor.Css -> "css"
-      | CssPreprocessor.Sass -> "sass"
-      | CssPreprocessor.Less -> "less"
+    [<RequireQualifiedAccess>]
+    type Transpiler =
+      | Babel
+      | Typescript
+      member this.ToArgString() =
+        match this with
+        | Babel -> ""
+        | Typescript -> "typescript"
 
-    let testingFx =
-      match template.UnitTestingFx with
-      | UnitTestingFx.Jest -> "jest"
-      | UnitTestingFx.Jasmine -> "jasmine"
-      | UnitTestingFx.Mocha -> "mocha"
-      | UnitTestingFx.Tape -> "tape"
+    [<RequireQualifiedAccess>]
+    type HtmlMinifier =
+      | None
+      | HtmlMin
+      member this.ToArgString() =
+        match this with
+        | None -> ""
+        | HtmlMin -> "htmlmin"
 
-    let e2eTestingFx =
-      match template.E2ETesingFx with
-      | Some fx ->
-          match fx with
-          | E2ETestingFx.Cypress -> "cypress"
-      | None -> ""
+    [<RequireQualifiedAccess>]
+    type CssPreprocessor =
+      | Css
+      | Sass
+      | Less
+      | Stylus
+      member this.ToArgString() =
+        match this with
+        | Css -> ""
+        | Sass -> "sass"
+        | Less -> "less"
+        | Stylus -> "stylus"
 
-    let sampleCode =
-      match template.SampleCode with
-      | SampleCode.AppMin -> "app-min"
-      | SampleCode.AppWithRouter -> "app-with-router"
+    [<RequireQualifiedAccess>]
+    type PostCSS =
+      | None
+      | PostCSS
+      member this.ToArgString() =
+        match this with
+        | None -> ""
+        | PostCSS -> "postcss"
 
-    [| sampleCode |]
-    |> Array.append [|
-         bundler
-         transpiler
-         cssPreprocessor
-         testingFx
-         if not (System.String.IsNullOrEmpty(e2eTestingFx))
-         then e2eTestingFx
-       |]
-    |> Array.filter (System.String.IsNullOrEmpty >> not)
+    [<RequireQualifiedAccess>]
+    type E2ETestingFx =
+      | None
+      | Cypress
+      member this.ToArgString() =
+        match this with
+        | None -> ""
+        | Cypress -> "cypress"
 
+    [<RequireQualifiedAccess>]
+    type UnitTestingFx =
+      | None
+      | Jest
+      | Karma
+      member this.ToArgString() =
+        match this with
+        | None -> ""
+        | Jest -> "jest"
+        | Karma -> "karma"
 
+    [<RequireQualifiedAccess>]
+    type CodeEditor =
+      | None
+      | VSCode
+      member this.ToArgString() =
+        match this with
+        | None -> ""
+        | VSCode -> "vscode"
 
-(*
-  npx makes aurelia new-project-name -s dumber,css-module,sass,cypress,app-with-router
-*)
+    [<RequireQualifiedAccess>]
+    type Scaffold =
+      | ScaffoldMinimum
+      | ScaffoldNavigation
+      | PluginScaffoldMinimum
+      | PluginScaffoldBasic
+      member this.ToArgString() =
+        match this with
+        | ScaffoldMinimum -> "scaffold-minimum"
+        | ScaffoldNavigation -> "scaffold-navigation"
+        | PluginScaffoldMinimum -> "plugin-scaffold-minumum"
+        | PluginScaffoldBasic -> "plugin-scaffold-basic"
 
-type Project =
+    [<RequireQualifiedAccess>]
+    type DockerFile =
+      | No
+      | Yes
+      member this.ToArgString() =
+        match this with
+        | No -> ""
+        | Yes -> "docker"
+
+    type NewArgs =
+      {
+        Name: string
+        ProjectType: ProjectType
+        Bundler: Bundler
+        TargetPlatform: TargetPlatform
+        Transpiler: Transpiler
+        HtmlMinifier: HtmlMinifier
+        CssPreprocessor: CssPreprocessor
+        PostCSS: PostCSS
+        UnitTestingFx: UnitTestingFx
+        E2ETestingFx: E2ETestingFx
+        CodeEditor: CodeEditor
+        Scaffold: Scaffold
+        DockerFile: DockerFile
+      }
+
+  [<RequireQualifiedAccess>]
+  type BuildFlags =
+    | Analyze
+    | Watch
+    | Env of string
+    member this.ToArgString() =
+      match this with
+      | Analyze -> "--analyze"
+      | Watch -> "--watch"
+      | Env env -> sprintf "--env %s" env
+
+  [<RequireQualifiedAccess>]
+  type RunFlags =
+    | Analyze
+    | HMR
+    | Watch
+    | Open
+    | Port of int
+    | Host of string
+    | Env of string
+    member this.ToArgString() =
+      match this with
+      | Analyze -> "--analyze"
+      | Watch -> "--watch"
+      | HMR -> "--hmr"
+      | Open -> "--open"
+      | Host host -> sprintf "--host %s" host
+      | Port port -> sprintf "--port %i" port
+      | Env env -> sprintf "--env %s" env
+
+  [<RequireQualifiedAccess>]
+  type Generator =
+    | Attribute
+    | BindingBehavior
+    | Component of directory: Option<string>
+    | Element
+    | Generator
+    | Task
+    | ValueConverter
+    | Custom of string
+    member this.ToArgString() =
+      match this with
+      | Attribute -> "attribute"
+      | BindingBehavior -> "binding-behavior"
+      | Component _ -> "component"
+      | Element -> "element"
+      | Generator -> "generator"
+      | Task -> "task"
+      | ValueConverter -> "value-converter"
+      | Custom custom -> custom
+
+  [<RequireQualifiedAccess>]
+  type AuCliCommand =
+    | New of New.NewArgs
+    (* These become available once npm install has been run in the project's directory *)
+    | Build of Option<list<BuildFlags>>
+    | Run of Option<list<RunFlags>>
+    | Generate of Generator: Generator * Name: string
+
+  module AuCliCommand =
+    open New
+
+    type PreCommand =
+      {
+        Command: string
+        Args: array<string>
+      }
+
+    let private generateNewCommand (command: New.NewArgs): PreCommand =
+      let args =
+        match command.ProjectType with
+        | ProjectType.App kind
+        | ProjectType.Plugin kind ->
+            match kind with
+            | ProjectKind.Babel -> "jest,vscode"
+            | ProjectKind.Typescript -> "typescript,jest,vscode"
+            | ProjectKind.Custom ->
+                [
+                  command.ProjectType.ToArgString()
+                  command.Bundler.ToArgString()
+                  command.TargetPlatform.ToArgString()
+                  command.Transpiler.ToArgString()
+                  command.HtmlMinifier.ToArgString()
+                  command.CssPreprocessor.ToArgString()
+                  command.PostCSS.ToArgString()
+                  command.UnitTestingFx.ToArgString()
+                  command.E2ETestingFx.ToArgString()
+                  command.CodeEditor.ToArgString()
+                  command.Scaffold.ToArgString()
+                  command.DockerFile.ToArgString()
+                ]
+                |> String.concat ","
+
+      let args =
+        match command.ProjectType with
+        | ProjectType.Plugin _ -> sprintf "plugin,%s" args
+        | _ -> args
+
+      {
+        Command = baseCommand
+        Args = [| "new"; command.Name; "-s"; args |]
+      }
+
+    let GenerateCommand (command: AuCliCommand): PreCommand =
+      match command with
+      | AuCliCommand.New newArgs -> generateNewCommand newArgs
+      | AuCliCommand.Build flags ->
+          let flags =
+            match flags with
+            | Some flags ->
+                flags
+                |> List.map (fun s -> s.ToArgString())
+                |> String.concat " "
+            | None -> ""
+
+          {
+            Command = baseCommand
+            Args = [| "build"; flags |]
+          }
+      | AuCliCommand.Run flags ->
+          let flags =
+            match flags with
+            | Some flags ->
+                flags
+                |> List.map (fun s -> s.ToArgString())
+                |> String.concat " "
+            | None -> ""
+
+          {
+            Command = baseCommand
+            Args = [| "build"; flags |]
+          }
+      | AuCliCommand.Generate (generator, name) ->
+          let dir =
+            match generator with
+            | Generator.Component dir -> defaultArg dir ""
+            | _ -> ""
+
+          {
+            Command = baseCommand
+            Args =
+              [|
+                "generate"
+                generator.ToArgString()
+                dir
+              |]
+          }
+
+type NewProject =
   {
     Name: string
     Path: string
-    ProjectType: ProjectType
-    Template: Option<Template>
-    PackageJson: Option<Node.PackageJson>
+    Template: Option<AureliaCli.New.NewArgs>
+  }
+
+type Project =
+  {
+    Path: string
+    PackageJson: Node.PackageJson
   }
 
 type Workspace =
@@ -159,19 +397,3 @@ type Workspace =
     Path: string
     Projects: seq<Project>
   }
-
-[<RequireQualifiedAccess>]
-type Platform =
-  | Windows
-  | Linux
-  | OSX
-  | Other
-
-  static member DetectPlatform() =
-    if RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-    then Windows
-    else if RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-    then Linux
-    else if RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
-    then OSX
-    else Other
