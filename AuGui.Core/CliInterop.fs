@@ -2,69 +2,59 @@ namespace AuGui.Core
 
 open CliWrap
 open CliWrap.Builders
+open CliWrap.Buffered
+open FSharp.Control.Tasks
+open AureliaCli
 
 [<RequireQualifiedAccess>]
 module CliInterop =
-  let private getExt (): string =
+  let private addPathToCliWrapCmd (envBuilder: EnvironmentVariablesBuilder): unit =
+    envBuilder.Set("PATH", System.Environment.GetEnvironmentVariable("PATH"))
+    |> ignore
+
+  let private baseCmd (packageManager: Node.PackageManager) =
     match Platform.DetectPlatform() with
-    | Platform.Windows -> ".cmd"
-    | Platform.Linux
+    | Platform.Windows -> sprintf "%s.cmd" (packageManager.ToArgString())
     | Platform.OSX
-    | Platform.Other -> ""
+    | Platform.Linux
+    | Platform.Other -> sprintf "%s" (packageManager.ToArgString())
 
-  let newProjectCmd (name: string)
-                    (template: ProjectType * Option<Template>)
-                    (targetPath: string)
-                    : Result<Command, string> =
 
-    let command = sprintf "npx%s" (getExt ())
+  let detectPackageManagers () =
+    task {
+      let! npm =
+        Cli.Wrap(baseCmd Node.PackageManager.Npm)
+           .WithEnvironmentVariables(addPathToCliWrapCmd)
+           .WithValidation(CommandResultValidation.None).ExecuteBufferedAsync()
 
-    let cmd =
-      match template with
-      | ProjectType.Babel, _ ->
-          Ok
-            (Cli.Wrap(command)
-                .WithArguments([| "makes"; "aurelia"; name; "-s" |]))
-      | ProjectType.Typescript, _ ->
-          Ok
-            (Cli.Wrap(command)
-                .WithArguments([|
-                  "makes"
-                  "aurelia"
-                  name
-                  "-s typescript"
-                |]))
-      | ProjectType.Custom, Some template ->
-          let opts = Template.GetCmdArgs template
+      let! pnpm =
+        Cli.Wrap(baseCmd Node.PackageManager.Pnpm)
+           .WithEnvironmentVariables(addPathToCliWrapCmd)
+           .WithValidation(CommandResultValidation.None).ExecuteBufferedAsync()
 
-          let args =
-            [|
-              "makes"
-              "aurelia"
-              name
-              "-s"
-              (opts |> String.concat ",")
-            |]
+      return [
+        if npm.ExitCode = 0
+           && not (System.String.IsNullOrWhiteSpace npm.StandardOutput) then
+          Node.PackageManager.Npm
+        if pnpm.ExitCode = 0
+           && not (System.String.IsNullOrWhiteSpace pnpm.StandardOutput) then
+          Node.PackageManager.Pnpm
+      ]
+    }
 
-          Ok(Cli.Wrap(command).WithArguments(args))
-      | ProjectType.Custom, None ->
-          Error "Can't create custom template without options"
+  let getInstallCliWrapCmd (project: Project)
+                           (packageManager: Node.PackageManager)
+                           =
+    Cli.Wrap(baseCmd packageManager).WithArguments([| "install" |])
+       .WithWorkingDirectory(project.Path)
+       .WithEnvironmentVariables(addPathToCliWrapCmd)
 
-    match cmd with
-    | Ok command ->
-        printfn "%A" command.EnvironmentVariables
+  let getCliWrapCmd (targetPath: string)
+                    (auCommand: AureliaCli.AuCliCommand)
+                    : Command =
 
-        let configure (envBuilder: EnvironmentVariablesBuilder): unit =
-          envBuilder.Set
-            ("PATH", System.Environment.GetEnvironmentVariable("PATH"))
-          |> ignore
+    let command = AuCliCommand.GenerateCommand auCommand
 
-        printfn "%A" command.EnvironmentVariables
-
-        let command =
-          command.WithWorkingDirectory(targetPath)
-                 .WithEnvironmentVariables(configure)
-
-        printfn "%A" command.EnvironmentVariables
-        Ok command
-    | Error err -> Error err
+    Cli.Wrap(command.Command).WithArguments(command.Args)
+       .WithWorkingDirectory(targetPath)
+       .WithEnvironmentVariables(addPathToCliWrapCmd)
