@@ -388,13 +388,20 @@ type NewProject =
 
 type Project =
   {
+    Directory: string
     Path: string
     PackageJson: Node.PackageJson
   }
 
-type Workspace =
+type Workplace =
   {
     Name: string
     Path: string
     Projects: seq<Project>
   }
+
+[<RequireQualifiedAccess>]
+type Page =
+  | Home
+  | Workspace of Workplace
+  | Project of Project
