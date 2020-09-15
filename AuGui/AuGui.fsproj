@@ -2,13 +2,15 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <TargetFramework>net5.0</TargetFramework>
+        <LangVersion>preview</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
         <Compile Include="AuGuiClassNames.fs" />
         <Compile Include="Components\Common.fs" />
         <Compile Include="Views\NewProject.fs" />
+        <Compile Include="Views\Workspace.fs" />
         <Compile Include="Shell.fs" />
         <Compile Include="Program.fs" />
         <AvaloniaResource Include="**\*.xaml" />

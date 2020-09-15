@@ -9,7 +9,7 @@
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build",
-      "program": "${workspaceFolder}/AuGui/bin/Debug/netcoreapp3.1/AuGui.dll",
+      "program": "${workspaceFolder}/AuGui/bin/Debug/net5.0/AuGui.dll",
       "args": [],
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false
