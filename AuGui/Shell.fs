@@ -21,15 +21,17 @@ module Shell =
   open Avalonia.FuncUI.Components.Hosts
   open Avalonia.FuncUI.DSL
   open Avalonia.FuncUI.Elmish
+  open AuGui.Core
 
-  type State = { Tabs: list<string> }
+  type State = { Page: Page }
 
   type Msg =
+    | ChangePage of Page
     | OpenDirectoryDialog of unit
     | OpenDirectoryDialogSuccess of Result<Option<string>, exn>
     | OpenDirectoryDialogError of exn
 
-  let init () = { Tabs = [ "Tab1"; "Tab2" ] }, Cmd.none
+  let init () = { Page = Page.Home }, Cmd.none
 
   let onRequestFolderDialog (_: State) =
     let sub dispatch =
@@ -39,13 +41,22 @@ module Shell =
 
     Cmd.ofSub sub
 
+  let onRequestPageChange (_: State) =
+    let sub dispatch =
+      AuGuiEvents.OnRequestPageChange.Subscribe(ChangePage >> dispatch)
+      |> ignore
+
+    Cmd.ofSub sub
+
+
   let update (msg: Msg)
              (state: State)
              (window: Window)
              (dialogSuccess: Option<string> -> unit)
              (dialogError: exn -> unit)
-             : State * Cmd<_> =
+             : State * Cmd<Msg> =
     match msg with
+    | ChangePage page -> { state with Page = page }, Cmd.none
     | OpenDirectoryDialog _ ->
         let openFolderDialog () =
           task {
@@ -87,6 +98,10 @@ module Shell =
               TabItem.header "New Project"
               TabItem.content (ViewBuilder.Create<NewProject.Host>([]))
             ]
+            TabItem.create [
+              TabItem.header "Workspace"
+              TabItem.content (ViewBuilder.Create<Workspace.Host>([]))
+            ]
           ]
         ]
       ]
@@ -124,6 +139,7 @@ module Shell =
       Elmish.Program.mkProgram init updateWithServices view
       |> Program.withHost this
       |> Program.withSubscription onRequestFolderDialog
+      |> Program.withSubscription onRequestPageChange
 #if DEBUG
       |> Program.withConsoleTrace
 #endif
